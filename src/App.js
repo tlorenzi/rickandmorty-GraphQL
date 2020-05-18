@@ -10,11 +10,35 @@ class App extends React.Component {
 
   constructor(props) {
     super(props);
-    this.state = { charArr: [] };
+    this.state = { charArr: [], count: 0 };
+
   }
 
-  UNSAFE_componentWillMount() {
-    let characterResults = [];
+  getMore = () => {
+
+    const GET_ALL_CHARACTERS = gql`
+      query try ($pageNumber: Int!)
+      {
+        characters(page: $pageNumber)  
+        {
+          results
+          {
+            name,
+            status,
+            species,
+            gender,
+            image,
+            episode
+            {
+              name
+            }
+          }
+        }
+      }
+      
+      `;
+
+    let characterResults = [...this.state.charArr];
     let httpLink = createHttpLink({ uri: 'https://rickandmortyapi.com/graphql/' });
 
     const client = new ApolloClient({
@@ -22,26 +46,7 @@ class App extends React.Component {
       cache: new InMemoryCache()
     });
 
-    const GET_ALL_CHARACTERS = gql`
-        {
-          characters
-          {
-            results
-            {
-              name,
-              status,
-              species,
-              gender,
-              image,
-              episode
-              {
-                name
-              }
-            }
-          }
-        }
-        `;
-    client.query({ query: GET_ALL_CHARACTERS })
+    client.query({ query: GET_ALL_CHARACTERS, variables: { "pageNumber": this.state.count + 1 } })
       .then((res) => {
         let tempRes = res.data.characters.results;
 
@@ -58,17 +63,32 @@ class App extends React.Component {
           }
           characterResults.push(temp);
         }
-        this.setState({ charArr: characterResults });
+
+        this.setState({ charArr: characterResults, count: this.state.count + 1 });
       })
       .catch(err => console.log(err));
   }
 
+  pagnate = () => {
+    console.log("Pagnate");
+    this.getMore();
+  }
+
+  UNSAFE_componentWillMount() {
+    this.getMore();
+  }
+
   render() {
     return (
-      <div className="appClass">
-        {this.state.charArr.map(curr =>
-          <Character name={curr.name} status={curr.status} episode={curr.episode} species={curr.species} gender={curr.gender} image={curr.image} key={curr.name} />
-        )}
+      <div>
+        <div className="appClass">
+          {this.state.charArr.map(curr =>
+            <Character name={curr.name} status={curr.status} episode={curr.episode} species={curr.species} gender={curr.gender} image={curr.image} key={curr.name} />
+          )}
+        </div>
+        <div id="buttonDiv">
+          <button id="button" onClick={this.pagnate}>More</button>
+        </div>
       </div>
     )
   }
